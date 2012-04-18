@@ -1,0 +1,5 @@
+/[Bb]uild/
+/packages/
+obj/
+*.suo
+*.user

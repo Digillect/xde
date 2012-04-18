@@ -1,0 +1,43 @@
+
+DECLARE @tableXdeName NVARCHAR(500)
+SET @tableXdeName = '{0}'
+SET NOCOUNT ON
+
+IF NOT EXISTS (SELECT * FROM SYSOBJECTS WHERE [NAME] = 'XT_' + @tableXdeName) 
+	RETURN
+
+CREATE TABLE #p (index_name sysname, index_description varchar(210), index_keys nvarchar(2078))
+
+DECLARE @CNAME NVARCHAR(500)
+DECLARE @TNAME NVARCHAR(500)
+DECLARE @cmd NVARCHAR(4000)
+
+set @TNAME = 'XT_'+ @tableXdeName
+
+insert into #p exec sp_helpindex @TNAME
+
+DECLARE @t TABLE (CNAME nvarchar(500), TNAME nvarchar(500))
+
+INSERT INTO @t
+SELECT 
+	TSI.NAME, TSO.NAME 
+FROM SYSOBJECTS TSI
+	INNER JOIN #p TSA ON TSI.NAME = TSA.index_name
+	LEFT JOIN SYSOBJECTS TSO ON TSI.parent_obj = TSO.ID
+WHERE
+	TSO.NAME = @TNAME AND TSI.xtype = 'UQ'
+
+drop table #p
+
+DECLARE c CURSOR FOR SELECT CNAME, TNAME from @t
+OPEN c
+FETCH NEXT FROM c INTO @CNAME, @TNAME
+WHILE @@FETCH_STATUS = 0
+BEGIN
+	SET @cmd = 'ALTER TABLE dbo.[' + @TNAME + '] DROP CONSTRAINT [' + @CNAME + ']'
+	EXEC(@cmd)
+	FETCH NEXT FROM c INTO @CNAME, @TNAME
+END
+CLOSE c
+DEALLOCATE c
+
