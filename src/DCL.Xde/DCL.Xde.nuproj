@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<PropertyGroup>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+
+		<BuildPath>..\..\build\bin\$(Configuration)</BuildPath>
+		<OutputPath>..\..\build\package\$(Configuration)\$(MSBuildProjectName)\</OutputPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<LibNet40 Include="$(BuildPath)\Digillect.Xde.dll"/>
+		<LibNet40 Include="$(BuildPath)\Digillect.Xde.pdb"/>
+		<LibNet40 Include="$(BuildPath)\Digillect.Xde.xml"/>
+		<LibNet40 Include="$(BuildPath)\CodeContracts\Digillect.Xde.Contracts.*"/>
+	</ItemGroup>
+
+	<Import Project="..\..\packages\Digillect.NuGet.Packaging.1.0.1\content\NuGet.Project.Targets"/>
+</Project>
