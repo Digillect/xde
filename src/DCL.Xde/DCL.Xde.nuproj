@@ -4,8 +4,9 @@
 	<PropertyGroup>
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
 
-		<BuildPath>..\..\build\bin\$(Configuration)</BuildPath>
-		<OutputPath>..\..\build\package\$(Configuration)\$(MSBuildProjectName)\</OutputPath>
+		<BuildPath>..\..\target\$(Configuration)\bin</BuildPath>
+		<OutputPath>..\..\target\$(Configuration)\package</OutputPath>
+		<VersionAssembly>$(BuildPath)\Digillect.Xde.dll</VersionAssembly>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -15,5 +16,16 @@
 		<LibNet40 Include="$(BuildPath)\CodeContracts\Digillect.Xde.Contracts.*"/>
 	</ItemGroup>
 
-	<Import Project="..\..\packages\Digillect.NuGet.Packaging.1.0.1\content\NuGet.Project.Targets"/>
+	<Import Project="..\..\packages\Digillect.Build.Tools.1.1.0\tools\NuGet.Packaging.targets"/>
+
+	<Target Name="TransformPackageVersion">
+		<PropertyGroup>
+			<_Major>$([System.Text.RegularExpressions.Regex]::Replace( $(PackageVersion), "(\d+.\d+.\d+)\.(\d+)", "$1" ))</_Major>
+			<_Build>$([System.Text.RegularExpressions.Regex]::Replace( $(PackageVersion), "(\d+.\d+.\d+)\.(\d+)", "$2" ))</_Build>
+			<_Final>$([System.String]::Format( "{0}-alpha-{1:00000}", $(_Major), $([MSBuild]::Add( $(_Build), 0 )) ))</_Final>
+
+			<PackageVersion Condition=" '$(BuildNumber)' != '' ">$([System.Text.RegularExpressions.Regex]::Replace( $(PackageVersion), "(\d+\.\d+\.\d+\.\d+)", $(_Final) ))</PackageVersion>
+			<PackageVersion Condition=" '$(BuildNumber)' == '' ">$([System.Text.RegularExpressions.Regex]::Replace( $(PackageVersion), "(\d+\.\d+\.\d+\.\d+)", "$(_Major)" ))</PackageVersion>
+		</PropertyGroup>
+	</Target>
 </Project>

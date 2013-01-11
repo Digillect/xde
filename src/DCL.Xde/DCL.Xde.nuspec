@@ -3,7 +3,7 @@
 <package>
 	<metadata>
 		<id>DCL.Xde</id>
-		<version>4.0.0-alpha</version>
+		<version>4.0.0</version>
 		<title>XDE Library</title>
 		<authors>Andrew Nefedkin, Andrey Rumjantcev</authors>
 		<owners>Andrew Nefedkin</owners>

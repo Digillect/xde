@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.InteropServices;
@@ -9,8 +9,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("Retail")]
 #endif
 [assembly: AssemblyCompany("Actis Systems")]
-[assembly: AssemblyProduct("Digillect® Common Libraries")]
-[assembly: AssemblyCopyright("© 2002-2012 Actis Systems. All rights reserved.")]
+[assembly: AssemblyProduct("DigillectÂ® Common Libraries")]
+[assembly: AssemblyCopyright("Â© 2002-2012 Actis Systems. All rights reserved.")]
 [assembly: AssemblyTrademark("Digillect is a registered trademark of Actis Systems.")]
 
 [assembly: AssemblyVersion(AssemblyInfo.Version)]
@@ -26,11 +26,11 @@ internal static class AssemblyInfo
 {
 	public const string Major = "4";
 	public const string Minor = "0";
-	public const string Patch = "0";
-	public const string SemVerSuffix = "-alpha";
+	public const string Revision = "0";
+	public const string BuildNumber = "0";
 
-	public const string Version = Major + "." + Minor + "." + Patch;
-	public const string FileVersion = Major + "." + Minor + "." + Patch + SemVerSuffix;
-	public const string ProductVersion = Major + "." + Minor;
+	public const string Version = Major + "." + Minor + "." + Revision + ".0";
+	public const string FileVersion = Major + "." + Minor + "." + Revision + "." + BuildNumber;
+	public const string ProductVersion = Major + "." + Minor + "." + Revision;
 	public const string SatelliteContractVersion = Major + "." + Minor + ".0.0";
 }
