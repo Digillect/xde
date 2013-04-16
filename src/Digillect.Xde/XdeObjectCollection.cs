@@ -56,6 +56,14 @@ namespace Digillect.Xde
 		}
 #endif
 
+		public void ForEach(Action<T> action)
+		{
+			foreach ( var item in this.Items )
+			{
+				action(item);
+			}
+		}
+
 		protected override string GetKeyForItem(T item)
 		{
 			return item.Name;

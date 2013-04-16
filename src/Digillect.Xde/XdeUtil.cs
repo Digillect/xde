@@ -96,7 +96,7 @@ namespace Digillect.Xde
 					}
 					else
 					{
-						StringBuilder paramBuffer = new StringBuilder('(', values.Count * 3);
+						StringBuilder paramBuffer = new StringBuilder("(", values.Count * 3);
 
 						foreach ( object value in values )
 						{
@@ -129,29 +129,14 @@ namespace Digillect.Xde
 
 		#region Extensions
 		/// <summary>
-		/// Возвращает ближайший по иерархии экземпляр Xde-сессии.
+		/// Возвращает ближайший по иерархии объект заданного типа или <c>null</c>, если такового нет.
 		/// </summary>
-		/// <param name="obj">Объект, для которого ищется Xde-сессия.</param>
-		/// <returns>Ближайший по иерархии экземпляр XdeSession или <b>null</b> если таковой не найден.</returns>
-		public static XdeSession GetSession(this IXdeHierarchyObject obj)
-		{
-			if ( obj == null )
-				return null;
-			else if ( obj is XdeSession )
-				return (XdeSession) obj;
-			else
-				return GetSession(obj.Owner);
-		}
-
-		/// <summary>
-		/// Возвращает ближайший по иерархии объект заданного типа или <b>null</b> если такового нет.
-		/// </summary>
-		/// <param name="obj"></param>
+		/// <param name="source"></param>
 		/// <param name="ownerType">Тип искомого объекта.</param>
-		/// <returns>Ближайший по иерархии объект заданного типа или <b>null</b> если такового нет.</returns>
-		public static IXdeHierarchyObject GetOwnerOf(this IXdeHierarchyObject obj, Type ownerType)
+		/// <returns>Ближайший по иерархии объект заданного типа или <c>null</c>, если такового нет.</returns>
+		public static IXdeHierarchyObject GetOwnerOf(this IXdeHierarchyObject source, Type ownerType)
 		{
-			if ( obj == null )
+			if ( source == null )
 			{
 				return null;
 			}
@@ -161,24 +146,48 @@ namespace Digillect.Xde
 				throw new ArgumentNullException("ownerType");
 			}
 
-			if ( ownerType.IsAssignableFrom(obj.GetType()) )
+			if ( ownerType.IsAssignableFrom(source.GetType()) )
 			{
-				return obj;
+				return source;
 			}
 
-			return GetOwnerOf(obj.Owner, ownerType);
+			return GetOwnerOf(source.Owner, ownerType);
 		}
 
 		/// <summary>
-		/// Возвращает ближайший по иерархии объект заданного типа или <b>null</b> если такового нет.
+		/// Возвращает ближайший по иерархии объект заданного типа или <c>null</c>, если такового нет.
 		/// </summary>
 		/// <typeparam name="T">Тип искомого объекта.</typeparam>
-		/// <param name="obj"></param>
-		/// <returns>Ближайший по иерархии объект заданного типа или <b>null</b> если такового нет.</returns>
+		/// <param name="source"></param>
+		/// <returns>Ближайший по иерархии объект заданного типа или <c>null</c>, если такового нет.</returns>
 		/// <seealso cref="GetOwnerOf(IXdeHierarchyObject,Type)"/>
-		public static T GetOwnerOf<T>(this IXdeHierarchyObject obj) where T : IXdeHierarchyObject
+		public static T GetOwnerOf<T>(this IXdeHierarchyObject source) where T : IXdeHierarchyObject
 		{
-			return (T) GetOwnerOf(obj, typeof(T));
+			return (T) GetOwnerOf(source, typeof(T));
+		}
+
+		internal static IXdeAdapter GetXdeAdapter(this IXdeHierarchyObject source)
+		{
+			var registration = (XdeRegistration) source.GetOwnerOf(typeof(XdeRegistration));
+
+			if ( registration == null )
+			{
+				throw new InvalidOperationException("Invalid hierarchy.");
+			}
+
+			return registration.Adapter;
+		}
+
+		internal static IXdeLayer GetXdeLayer(this IXdeHierarchyObject source)
+		{
+			var registration = (XdeRegistration) source.GetOwnerOf(typeof(XdeRegistration));
+
+			if ( registration == null )
+			{
+				throw new InvalidOperationException("Invalid hierarchy.");
+			}
+
+			return registration.Layer;
 		}
 		#endregion
 	}

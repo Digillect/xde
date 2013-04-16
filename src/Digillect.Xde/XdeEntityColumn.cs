@@ -20,7 +20,7 @@ namespace Digillect.Xde
 		public XdeEntityColumn(XdeEntity owner, string name, Type undelyingType, int precision, int scale, bool nullable)
 			: base(owner, name.Trim().ToUpper())
 		{
-			this.GetSession().Layer.SetColumnUndelyingType(this, undelyingType, precision, scale);
+			this.GetXdeLayer().SetColumnUndelyingType(this, undelyingType, precision, scale);
 			this.Nullable = nullable;
 		}
 
@@ -192,12 +192,12 @@ namespace Digillect.Xde
 		{
 			base.ProcessDump(buffer, prefix);
 
-			buffer.Append(" ").Append(this.GetSession().Layer.GetColumnDefinition(this, false));
+			buffer.Append(" ").Append(this.GetXdeLayer().GetColumnDefinition(this, false));
 		}
 
 		public override IEnumerable<XdeCommand> GetCommand()
 		{
-			IXdeLayer layer = this.GetSession().Layer;
+			IXdeLayer layer = this.GetXdeLayer();
 
 			if ( m_operation == XdeExecutionOperation.Delete )
 			{

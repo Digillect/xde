@@ -55,9 +55,6 @@ namespace Digillect.Xde
 
 		IEnumerable<XdeCommand> GetCreateEntityCommand(string entityName);
 		IEnumerable<XdeCommand> GetCreateEntityCommand(string entityName, IEnumerable<KeyValuePair<string, string>> fields);
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		//[Obsolete("Use the generic alternative.")]
-		void GetCreateEntityCommand(ICollection<XdeCommand> command, string entityName, IDictionary fields);
 		IEnumerable<XdeCommand> GetDropEntityCommand(string entityName);
 		IEnumerable<XdeCommand> GetRenameEntityCommand(string entityName, string newEntityName);
 

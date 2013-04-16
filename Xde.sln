@@ -1,16 +1,17 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Digillect.Xde", "src\Digillect.Xde\Digillect.Xde.csproj", "{8E824684-1646-4EDA-8CE3-7CAD86D4351F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Digillect.Xde.MySql", "src\Digillect.Xde.MySql\Digillect.Xde.MySql.csproj", "{A21B5456-443A-449D-AD95-9BEA81472263}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Digillect.Xde.Oracle", "src\Digillect.Xde.Oracle\Digillect.Xde.Oracle.csproj", "{13376EE0-6C46-4AA3-A6B4-BB931BF26E95}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DCL.Xde", "DCL.Xde", "{2C2D1A4A-FBC5-4050-BB3E-910E7809DD70}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{CBF279AC-18EC-4819-93EB-8E9A36CC7B22}"
 	ProjectSection(SolutionItems) = preProject
-		src\DCL.Xde\DCL.Xde.nuproj = src\DCL.Xde\DCL.Xde.nuproj
-		src\DCL.Xde\DCL.Xde.nuspec = src\DCL.Xde\DCL.Xde.nuspec
+		build.proj = build.proj
+		Digillect.Xde.nuproj = Digillect.Xde.nuproj
+		Digillect.Xde.nuspec = Digillect.Xde.nuspec
 	EndProjectSection
 EndProject
 Global

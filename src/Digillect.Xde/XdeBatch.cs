@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Digillect.Xde
 {
-	public sealed class XdeBatch : Collection<IXdeObject>, ICollection<XdeCommand>
+	public sealed class XdeBatch : Collection<IXdeObject>, IEnumerable<XdeCommand>
 	{
 		private readonly XdeSession m_session;
 		private int m_commandTimeout = -1;
@@ -85,12 +85,12 @@ namespace Digillect.Xde
 
 		public void Execute()
 		{
-			m_session.Execute(this.Items.SelectMany(x => x.GetCommand()), m_commandTimeout, m_isolationLevel);
+			m_session.Execute(this, m_commandTimeout, m_isolationLevel);
 		}
 
 		public void Execute(IDbTransaction outerTransaction)
 		{
-			m_session.Execute(this.Items.SelectMany(x => x.GetCommand()), m_commandTimeout, outerTransaction);
+			m_session.Execute(this, m_commandTimeout, outerTransaction);
 		}
 		#endregion
 
@@ -120,45 +120,10 @@ namespace Digillect.Xde
 		}
 		#endregion
 
-		#region ICollection<XdeCommand> Members
-		int ICollection<XdeCommand>.Count
-		{
-			get { return this.Items.OfType<XdeCommand>().Count(); }
-		}
-
-		void ICollection<XdeCommand>.Add(XdeCommand item)
-		{
-			Add(item);
-		}
-
-		bool ICollection<XdeCommand>.Contains(XdeCommand item)
-		{
-			return Contains(item);
-		}
-
-		void ICollection<XdeCommand>.CopyTo(XdeCommand[] array, int arrayIndex)
-		{
-			foreach ( var item in this.Items.OfType<XdeCommand>() )
-			{
-				array[arrayIndex++] = item;
-			}
-		}
-
-		bool ICollection<XdeCommand>.IsReadOnly
-		{
-			get { return this.Items.IsReadOnly; }
-		}
-
-		bool ICollection<XdeCommand>.Remove(XdeCommand item)
-		{
-			return Remove(item);
-		}
-		#endregion
-
 		#region IEnumerable<XdeCommand> Members
 		IEnumerator<XdeCommand> IEnumerable<XdeCommand>.GetEnumerator()
 		{
-			return this.Items.OfType<XdeCommand>().GetEnumerator();
+			return this.Items.SelectMany(x => x.GetCommand()).GetEnumerator();
 		}
 		#endregion
 	}

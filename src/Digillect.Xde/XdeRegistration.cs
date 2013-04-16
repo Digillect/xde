@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
+using System.Data;
 
 namespace Digillect.Xde
 {
@@ -102,6 +102,19 @@ namespace Digillect.Xde
 		public XdeSession NewSession()
 		{
 			return new XdeSession(this);
+		}
+		#endregion
+
+		#region GetConnection
+		/// <summary>
+		/// A helper method to simplify access to DB connections.
+		/// </summary>
+		/// <returns>An <see cref="IDbConnection"/> instance.</returns>
+		/// <seealso cref="IXdeAdapter.GetConnection"/>
+		/// <see cref="ConnectionString"/>
+		public IDbConnection GetConnection()
+		{
+			return this.Adapter.GetConnection(this.ConnectionString);
 		}
 		#endregion
 

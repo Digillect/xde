@@ -8,6 +8,7 @@ namespace Digillect.Xde
 	/// <summary>
 	/// Свойство объекта данных.
 	/// </summary>
+	[System.Diagnostics.DebuggerDisplay("IsNull = {IsNull}")]
 	public class XdeProperty : XdeHierarchyObject, IXdeDatabaseObject, IConvertible
 	{
 		private object m_value;
@@ -24,7 +25,6 @@ namespace Digillect.Xde
 		/// <summary>
 		/// Возвращает или устанавливает значение свойства объекта данных.
 		/// </summary>
-		/// <value></value>
 		public virtual object Value
 		{
 			get { return m_value; }
@@ -32,16 +32,20 @@ namespace Digillect.Xde
 			{
 				if ( value != null )
 				{
-					if ( value is Guid && (Guid) value == Guid.Empty )
+					if ( value is Guid && (Guid) value == Guid.Empty
+						|| value is DateTime && (DateTime) value == DateTime.MinValue
+						|| value is String && ((string) value).Length == 0 )
+					{
 						value = null;
-					else if ( value is DateTime && (DateTime) value == DateTime.MinValue )
-						value = null;
-					else if ( value is string && ((string) value).Length == 0 )
-						value = null;
+					}
 					else if ( value is Enum )
-						value = Convert.ToInt32(((Enum) value));
+					{
+						value = Convert.ChangeType(value, Enum.GetUnderlyingType(value.GetType()), CultureInfo.InvariantCulture);
+					}
 					else if ( value is TimeSpan )
+					{
 						value = ((TimeSpan) value).Ticks;
+					}
 				}
 
 				if ( !this.Modified )
@@ -121,7 +125,7 @@ namespace Digillect.Xde
 
 		public override IEnumerable<XdeCommand> GetCommand()
 		{
-			return this.GetSession().Layer.GetPropertySaveCommand(this);
+			return this.GetXdeLayer().GetPropertySaveCommand(this);
 		}
 		#endregion
 
@@ -147,7 +151,7 @@ namespace Digillect.Xde
 		}
 		#endregion
 
-		#region implicits
+		#region Conversion Operators
 		/// <summary>
 		/// Преобразует значение свойства к типу <see cref="System.Decimal"/>.
 		/// <seealso cref="System.Convert.ToDecimal(System.Object)"/>
@@ -156,75 +160,156 @@ namespace Digillect.Xde
 		/// <returns><see cref="System.Decimal"/> эквивалентное значению свойства объекта данных, или ноль если значение свойства есть null.</returns>
 		public static implicit operator decimal(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToDecimal(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator short(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToInt16(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator int(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToInt32(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator int?(XdeProperty property)
 		{
-			return property.IsNull ? null : (int?) Convert.ToInt32(property.Value, CultureInfo.InvariantCulture);
+			return property == null || property.IsNull ? null : (int?) Convert.ToInt32(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator long(XdeProperty property)
 		{
-			return Convert.ToInt64(property.Value);
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
+			return Convert.ToInt64(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		[CLSCompliant(false)]
 		public static implicit operator ushort(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToUInt16(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		[CLSCompliant(false)]
-		public static implicit operator uint(XdeProperty p)
+		public static implicit operator uint(XdeProperty property)
 		{
-			return Convert.ToUInt32(p.Value, CultureInfo.InvariantCulture);
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
+			return Convert.ToUInt32(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		[CLSCompliant(false)]
 		public static implicit operator ulong(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToUInt64(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		[CLSCompliant(false)]
 		public static implicit operator sbyte(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToSByte(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator byte(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToByte(property.Value, CultureInfo.InvariantCulture);
 		}
-		public static implicit operator bool(XdeProperty p)
+
+		public static implicit operator bool(XdeProperty property)
 		{
-			return Convert.ToBoolean(p.Value, CultureInfo.InvariantCulture);
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
+			return Convert.ToBoolean(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator char(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToChar(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator string(XdeProperty property)
 		{
 			// Convert.ToString returns String.Empty if the value is null
-			if ( property.IsNull )
+			if ( property == null || property.IsNull )
 			{
 				return null;
 			}
 
-			return Convert.ToString(property.Value);
+			return Convert.ToString(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator float(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToSingle(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator double(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return Convert.ToDouble(property.Value, CultureInfo.InvariantCulture);
 		}
-		/// <summary> Преобразует значение свойства к <see cref="Array">Byte[]</see>.
+
+		/// <summary>
+		/// Преобразует значение свойства к <c>Byte[]</c>.
 		/// </summary>
 		/// <param name="property">Свойство объекта данных.</param>
 		/// <returns><see cref="Byte">Byte[]</see> эквивалентное значению свойства объекта данных, или null если значение свойства есть null.</returns>
@@ -243,51 +328,75 @@ namespace Digillect.Xde
 
 			throw new InvalidCastException("can not implicitly convert property value of type " + value.GetType().Name + " to byte[].");
 		}
+
 		/// <summary> Преобразует значение свойства к типу <see cref="DateTime"/>.
 		/// </summary>
 		/// <param name="property">Свойство объекта данных.</param>
 		/// <returns><see cref="System.DateTime"/> эквивалентное значению свойства объекта данных, или <see cref="DateTime.MinValue"/> если значение свойства есть null.</returns>
 		public static implicit operator DateTime(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			return property.IsNull ? DateTime.MinValue : Convert.ToDateTime(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		public static implicit operator DateTime?(XdeProperty property)
 		{
-			return property.IsNull ? null : (DateTime?) Convert.ToDateTime(property.Value);
+			return property == null || property.IsNull ? null : (DateTime?) Convert.ToDateTime(property.Value, CultureInfo.InvariantCulture);
 		}
+
 		/// <summary> Преобразует значение свойства к типу <see cref="System.TimeSpan"/>.
 		/// </summary>
 		/// <param name="property">Свойство объекта данных.</param>
 		/// <returns><see cref="System.TimeSpan"/> эквивалентное значению свойства объекта данных, или <see cref="TimeSpan.MinValue"/> если значение свойства есть null.</returns>
 		public static implicit operator TimeSpan(XdeProperty property)
 		{
-			return TimeSpan.FromTicks(Convert.ToInt64(property.Value));
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
+			return TimeSpan.FromTicks(Convert.ToInt64(property.Value, CultureInfo.InvariantCulture));
 		}
+
 		/// <summary> Преобразует значение свойства к типу <see cref="System.Guid"/>.
 		/// </summary>
 		/// <param name="property">Свойство объекта данных.</param>
 		/// <returns><see cref="System.Guid"/> эквивалентное значению свойства объекта данных, или <see cref="Guid.Empty">Guid.Empty</see> если значение свойства есть null.</returns>
 		public static implicit operator Guid(XdeProperty property)
 		{
+			if ( property == null )
+			{
+				throw new NullReferenceException("property");
+			}
+
 			if ( property.IsNull )
 				return Guid.Empty;
-			else if ( property.Value is Guid )
+
+			if ( property.Value is Guid )
 				return (Guid) property.Value;
-			else if ( property.Value is byte[] )
+
+			if ( property.Value is byte[] )
 				return new Guid((byte[]) property.Value);
-			else
-				return new Guid(property.Value.ToString());
+
+			return new Guid(Convert.ToString(property.Value, CultureInfo.InvariantCulture));
 		}
+
 		public static implicit operator Guid?(XdeProperty property)
 		{
-			if ( property.IsNull )
+			if ( property == null || property.IsNull )
 				return null;
-			else if ( property.Value is Guid )
+
+			if ( property.Value is Guid )
 				return (Guid) property.Value;
-			else if ( property.Value is byte[] )
+
+			if ( property.Value is byte[] )
 				return new Guid((byte[]) property.Value);
-			else
-				return new Guid(property.Value.ToString());
+
+			return new Guid(Convert.ToString(property.Value, CultureInfo.InvariantCulture));
 		}
 		#endregion
 
@@ -389,7 +498,7 @@ namespace Digillect.Xde
 					return new Guid((string) value);
 				}
 			}
-			else if ( conversionType == typeof(byte[]) )
+			else if ( conversionType == typeof(Byte[]) )
 			{
 				if ( value == null )
 				{
@@ -429,28 +538,15 @@ namespace Digillect.Xde
 		#region class IdentifierProperty
 		internal sealed class IdentifierProperty : XdeProperty
 		{
-			internal IdentifierProperty(XdeUnit owner, string name)
-				: base(owner, name, Guid.Empty)
+			internal IdentifierProperty(XdeUnit owner)
+				: base(owner, String.Empty, Guid.Empty)
 			{
 			}
 
 			public override object Value
 			{
-				get
-				{
-					XdeUnit unit = this.Unit;
-
-					if ( unit == null )
-					{
-						throw new InvalidOperationException("XdeProperty.IdentifierProperty.getValue : no unit specified.");
-					}
-
-					return unit.Id;
-				}
-				set
-				{
-					throw new NotSupportedException("Changing the identifier property's value is not allowed.");
-				}
+				get { return this.Unit.Id; }
+				set { throw new NotSupportedException("Changing the identifier property's value is not allowed."); }
 			}
 
 			public override bool IsNull

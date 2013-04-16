@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace Digillect.Xde
@@ -29,7 +30,23 @@ namespace Digillect.Xde
 		/// Создает новый экземпляр комманды.
 		/// </summary>
 		/// <param name="commandText">Текст команды.</param>
-		public XdeCommand(string commandText)
+		/// <param name="parameters">Параметры команды.</param>
+		public XdeCommand(string commandText, params object[] parameters)
+			: this(commandText, parameters == null ? new ArrayList() : new ArrayList(parameters))
+		{
+		}
+
+		/// <summary>
+		/// Создает новый экземпляр комманды.
+		/// </summary>
+		/// <param name="commandText">Текст команды.</param>
+		/// <param name="parameters">Коллекция параметров команды.</param>
+		/// <remarks>
+		/// <paramref name="parameters">Параметры</paramref> будут переданы команде как есть, без дополнительной обработки.
+		/// </remarks>
+		/// <seealso cref="Parameters"/>
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public XdeCommand(string commandText, IList parameters)
 			: base("Command")
 		{
 			if ( String.IsNullOrWhiteSpace(commandText) )
@@ -37,21 +54,13 @@ namespace Digillect.Xde
 				throw new ArgumentException("Empty command.", "commandText");
 			}
 
-			m_commandText = commandText;
-		}
-
-		/// <summary>
-		/// Создает новый экземпляр комманды.
-		/// </summary>
-		/// <param name="commandText">Текст команды.</param>
-		/// <param name="parameters">Коллекция параметров.</param>
-		public XdeCommand(string commandText, params object[] parameters)
-			: this(commandText)
-		{
-			if ( parameters != null )
+			if ( parameters == null )
 			{
-				Array.ForEach(parameters, x => m_parameters.Add(x));
+				throw new ArgumentNullException("parameters");
 			}
+
+			m_commandText = commandText;
+			m_parameters = ArrayList.ReadOnly(parameters);
 		}
 		#endregion
 

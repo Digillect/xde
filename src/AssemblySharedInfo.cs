@@ -3,15 +3,16 @@ using System.Reflection;
 using System.Resources;
 using System.Runtime.InteropServices;
 
+[assembly: AssemblyDescription("Digillect® XDE Framework")]
 #if DEBUG
 [assembly: AssemblyConfiguration("Debug")]
 #else
 [assembly: AssemblyConfiguration("Retail")]
 #endif
-[assembly: AssemblyCompany("Actis Systems")]
-[assembly: AssemblyProduct("Digillect® Common Libraries")]
-[assembly: AssemblyCopyright("© 2002-2012 Actis Systems. All rights reserved.")]
-[assembly: AssemblyTrademark("Digillect is a registered trademark of Actis Systems.")]
+[assembly: AssemblyCompany("Actis® Wunderman")]
+[assembly: AssemblyProduct("Digillect® Frameworks")]
+[assembly: AssemblyCopyright("© 2002-2013 Actis® Wunderman. All rights reserved.")]
+[assembly: AssemblyTrademark("Digillect is a registered trademark of Actis® Wunderman.")]
 
 [assembly: AssemblyVersion(AssemblyInfo.Version)]
 [assembly: AssemblyFileVersion(AssemblyInfo.FileVersion)]
@@ -30,7 +31,7 @@ internal static class AssemblyInfo
 	public const string BuildNumber = "0";
 
 	public const string Version = Major + "." + Minor + "." + Revision + ".0";
-	public const string FileVersion = Major + "." + Minor + "." + Revision + "." + BuildNumber;
+	public const string FileVersion = Major + "." + Minor + "." + Revision + "." + BuildNumber + "-beta";
 	public const string ProductVersion = Major + "." + Minor + "." + Revision;
 	public const string SatelliteContractVersion = Major + "." + Minor + ".0.0";
 }

@@ -1,10 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.ComponentModel;
 
 namespace Digillect.Xde.Layers
 {
@@ -12,19 +13,62 @@ namespace Digillect.Xde.Layers
 	{
 		protected static readonly string NewLinePlusTab = String.Intern(Environment.NewLine + '\t');
 
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		protected readonly IDictionary<string, string> EntityToTableMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		protected readonly IDictionary<string, string> PropertyToColumnMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
 		#region core
 		public abstract void CreateDatabase(IXdeAdapter adapter, string serverName, string databaseName, string userName, string password);
 
 		public virtual string GetTableName(string entityName)
 		{
-			return String.Intern("XT_" + entityName);
+			if ( entityName == null )
+			{
+				throw new ArgumentNullException("entityName");
+			}
+
+			lock ( EntityToTableMap )
+			{
+				if ( EntityToTableMap.ContainsKey(entityName) )
+				{
+					return EntityToTableMap[entityName];
+				}
+				else
+				{
+					string tableName = "XT_" + entityName.ToUpper(CultureInfo.InvariantCulture);
+
+					EntityToTableMap.Add(entityName, tableName);
+
+					return tableName;
+				}
+			}
 		}
 
 		public abstract string GetQualifiedTableName(string catalogName, string entityName);
 
 		public virtual string GetColumnName(string propertyName)
 		{
-			return String.IsNullOrWhiteSpace(propertyName) ? GetIdColumnName() : String.Intern("XM_" + propertyName);
+			if ( String.IsNullOrWhiteSpace(propertyName) )
+			{
+				return GetIdColumnName();
+			}
+
+			lock ( PropertyToColumnMap )
+			{
+				if ( PropertyToColumnMap.ContainsKey(propertyName) )
+				{
+					return PropertyToColumnMap[propertyName];
+				}
+				else
+				{
+					string columnName = "XM_" + propertyName.ToUpper(CultureInfo.InvariantCulture);
+
+					PropertyToColumnMap.Add(propertyName, columnName);
+
+					return columnName;
+				}
+			}
 		}
 
 		public virtual string GetIdColumnName()
@@ -96,15 +140,6 @@ namespace Digillect.Xde.Layers
 		}
 
 		public abstract IEnumerable<XdeCommand> GetCreateEntityCommand(string entityName, IEnumerable<KeyValuePair<string, string>> fields);
-
-		void IXdeLayer.GetCreateEntityCommand(ICollection<XdeCommand> command, string entityName, IDictionary fields)
-		{
-			foreach ( var cmd in GetCreateEntityCommand(entityName, fields.Cast<DictionaryEntry>().Select(x => new KeyValuePair<string, string>((string) x.Key, (string) x.Value))) )
-			{
-				command.Add(cmd);
-			}
-		}
-
 		public abstract IEnumerable<XdeCommand> GetDropEntityCommand(string entityName);
 		public abstract IEnumerable<XdeCommand> GetRenameEntityCommand(string entityName, string newEntityName);
 

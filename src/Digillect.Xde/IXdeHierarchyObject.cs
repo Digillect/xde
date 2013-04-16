@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Digillect.Xde
 {
@@ -10,12 +8,11 @@ namespace Digillect.Xde
 	public interface IXdeHierarchyObject
 	{
 		/// <summary>
-		/// Возвращает или устанавливает родительский объект для данного объекта.
+		/// Возвращает родительский объект для данного объекта.
 		/// </summary>
 		IXdeHierarchyObject Owner
 		{
 			get;
-			//set;
 		}
 	}
 }

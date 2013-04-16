@@ -5,12 +5,15 @@ using System.Text;
 
 namespace Digillect.Xde
 {
+	[System.Diagnostics.DebuggerDisplay("Name = {Name}")]
 	public abstract class XdeObject : IXdeObject
 	{
+		private string m_name;
+
 		#region Constructor
 		protected XdeObject(string name)
 		{
-			this.Name = name;
+			m_name = name;
 		}
 		#endregion
 
@@ -20,8 +23,8 @@ namespace Digillect.Xde
 		/// </summary>
 		public virtual string Name
 		{
-			get;
-			protected set;
+			get { return m_name; }
+			protected set { m_name = value; }
 		}
 
 		public virtual bool EnableDump
@@ -82,31 +85,6 @@ namespace Digillect.Xde
 		/// Возвращает необходимые выражения и параметры в виде списка команд.
 		/// </summary>
 		public abstract IEnumerable<XdeCommand> GetCommand();
-		#endregion
-	}
-
-	public abstract class XdeHierarchyObject : XdeObject, IXdeHierarchyObject
-	{
-		private readonly IXdeHierarchyObject m_owner;
-
-		#region Constructor
-		protected XdeHierarchyObject(IXdeHierarchyObject owner, string name)
-			: base(name)
-		{
-			if ( owner == null )
-			{
-				throw new ArgumentNullException("owner");
-			}
-
-			m_owner = owner;
-		}
-		#endregion
-
-		#region IXdeHierarchyObject Members
-		public IXdeHierarchyObject Owner
-		{
-			get { return m_owner; }
-		}
 		#endregion
 	}
 }

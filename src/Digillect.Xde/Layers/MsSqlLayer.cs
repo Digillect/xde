@@ -10,9 +10,6 @@ namespace Digillect.Xde.Layers
 {
 	public class MsSqlLayer : Sql92Layer
 	{
-		protected readonly IDictionary<string, string> Tables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		protected readonly IDictionary<string, string> Columns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
 		#region core
 		protected override string TableSchema
 		{
@@ -37,28 +34,6 @@ namespace Digillect.Xde.Layers
 			}
 		}
 
-		public override string GetTableName(string entityName)
-		{
-			if ( entityName == null )
-			{
-				throw new ArgumentNullException("entityName");
-			}
-
-			lock ( Tables )
-			{
-				if ( Tables.ContainsKey(entityName) )
-				{
-					return Tables[entityName];
-				}
-				else
-				{
-					string rc = "XT_" + entityName.ToUpper();
-					Tables.Add(entityName, rc);
-					return rc;
-				}
-			}
-		}
-
 		public override string GetQualifiedTableName(string catalogName, string entityName)
 		{
 			string value = String.Intern("[" + this.TableSchema + "].[" + GetTableName(entityName) + "]");
@@ -69,23 +44,6 @@ namespace Digillect.Xde.Layers
 			}
 
 			return String.Intern("[" + catalogName + "]." + value);
-		}
-
-		public override string GetColumnName(string propertyName)
-		{
-			lock ( Columns )
-			{
-				if ( Columns.ContainsKey(propertyName) )
-				{
-					return Columns[propertyName];
-				}
-				else
-				{
-					string columnName = String.IsNullOrWhiteSpace(propertyName) ? GetIdColumnName() : "XM_" + propertyName.ToUpper();
-					Columns.Add(propertyName, columnName);
-					return columnName;
-				}
-			}
 		}
 
 		public override string GetIsTableExistsExpression(string entityName)

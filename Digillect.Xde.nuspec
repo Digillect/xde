@@ -2,15 +2,15 @@
 
 <package>
 	<metadata>
-		<id>DCL.Xde</id>
-		<version>4.0.0</version>
-		<title>XDE Library</title>
+		<id>Digillect.Xde</id>
+		<version>$version$</version>
+		<title>Digillect XDE Core Library</title>
 		<authors>Andrew Nefedkin, Andrey Rumjantcev</authors>
 		<owners>Andrew Nefedkin</owners>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
-		<description>Digillect Common Libraries: XDE</description>
+		<description>Digillect XDE Framework</description>
 		<releaseNotes>Completely rewritten release for .NET 4.0.</releaseNotes>
-		<copyright>Copyright © 2002-2012 Actis Systems. All rights reserved.</copyright>
+		<copyright>Copyright © 2002-2013 Actis® Wunderman. All rights reserved.</copyright>
 		<tags>digillect xde</tags>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.Data"/>

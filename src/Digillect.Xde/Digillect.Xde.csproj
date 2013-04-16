@@ -44,6 +44,7 @@
     <Compile Include="..\AssemblySharedInfo.cs">
       <Link>Properties\AssemblySharedInfo.cs</Link>
     </Compile>
+    <Compile Include="XdeHierarchyObject.cs" />
     <Compile Include="XdeObjectCollection.cs" />
     <Compile Include="XdeEntityColumn.cs" />
     <Compile Include="XdeQueryBuildData.cs" />

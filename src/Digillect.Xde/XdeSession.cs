@@ -9,7 +9,7 @@ namespace Digillect.Xde
 	/// <summary>
 	/// Сессия.
 	/// </summary>
-	public sealed class XdeSession : IXdeHierarchyObject
+	public sealed class XdeSession
 	{
 		private readonly XdeRegistration m_registration;
 		private int m_commandTimeout = -1;
@@ -74,7 +74,7 @@ namespace Digillect.Xde
 
 		public XdeBatch NewBatch()
 		{
-			return new XdeBatch(this);
+			return new XdeBatch(this) { CommandTimeout = m_commandTimeout };
 		}
 
 		public XdeQuery NewQuery()
@@ -89,14 +89,28 @@ namespace Digillect.Xde
 
 		public XdeQuery NewQuery(string entityName, string whereClause, params object[] values)
 		{
-			return new XdeQuery(this, String.Empty, entityName, whereClause, values);
+			return new XdeQuery(this, String.Empty, entityName, whereClause, values) { CommandTimeout = m_commandTimeout };
 		}
 
+		/// <summary>
+		/// Возвращает новый экземпляр объекта данных для указанной сущности.
+		/// </summary>
+		/// <param name="entityName">Имя сущности.</param>
+		/// <returns>Новый объект данных.</returns>
+		/// <remarks>
+		/// Для созданного объекта данных устанавливается уникальный идентификатор, признак <see cref="XdeUnit.IsExists"/> устанавливается в <c>false</c>.
+		/// </remarks>
 		public XdeUnit NewUnit(string entityName)
 		{
 			return NewUnit(entityName, Guid.NewGuid(), false);
 		}
 
+		/// <summary>
+		/// Возвращает новый экземпляр объекта данных для указанной сущности.
+		/// </summary>
+		/// <param name="entityName">Имя сущности.</param>
+		/// <param name="id">Идентификатор объекта данных.</param>
+		/// <returns>Новый объект данных.</returns>
 		public XdeUnit NewUnit(string entityName, Guid id)
 		{
 			return NewUnit(entityName, id, null);
@@ -108,7 +122,7 @@ namespace Digillect.Xde
 
 			if ( !entites.Contains(entityName) )
 			{
-				throw new Exception(String.Format("Entity {0} not found.", entityName));
+				throw new InvalidOperationException(String.Format("Entity {0} not found.", entityName));
 			}
 
 			XdeUnit unit = entites[entityName].NewUnit(id);
@@ -120,19 +134,18 @@ namespace Digillect.Xde
 
 		public XdeEntityCollection GetEntities(bool refresh)
 		{
-			XdeRegistration registration = this.Registration;
-			XdeEntityCollection entities = registration.Entities;
+			XdeEntityCollection entities = m_registration.Entities;
 
 			if ( refresh || entities == null )
 			{
-				lock ( this.Registration )
+				lock ( m_registration )
 				{
-					entities = new XdeEntityCollection(this);
+					entities = new XdeEntityCollection(m_registration);
 
-					IXdeAdapter adapter = this.Adapter;
-					IXdeLayer layer = this.Layer;
+					IXdeAdapter adapter = m_registration.Adapter;
+					IXdeLayer layer = m_registration.Layer;
 
-					using ( IDbConnection dbConnection = adapter.GetConnection(registration.ConnectionString) )
+					using ( IDbConnection dbConnection = m_registration.GetConnection() )
 					{
 						dbConnection.Open();
 
@@ -147,8 +160,7 @@ namespace Digillect.Xde
 								while ( dataReader.Read() )
 								{
 									XdeEntityMetadata entityInfo = layer.GetEntityMetaData(adapter, dataReader);
-									XdeEntity entity = new XdeEntity(this, entityInfo.Name, entityInfo.Type, false);
-									entity.IsExists = true;
+									XdeEntity entity = new XdeEntity(this, entityInfo.Name, entityInfo.Type, false) { IsExists = true };
 
 									entities.Add(entity);
 								}
@@ -156,7 +168,7 @@ namespace Digillect.Xde
 						}
 					}
 
-					registration.Entities = entities;
+					m_registration.Entities = entities;
 				}
 			}
 
@@ -187,7 +199,7 @@ namespace Digillect.Xde
 					ExecuteStarted(this, new XdeSessionExecuteEventArgs(commandCollection.Count));
 				}
 
-				using ( IDbConnection connection = this.Adapter.GetConnection(this.Registration.ConnectionString) )
+				using ( IDbConnection connection = this.Registration.GetConnection() )
 				{
 					connection.Open();
 
@@ -266,7 +278,7 @@ namespace Digillect.Xde
 					ExecuteStarted(this, new XdeSessionExecuteEventArgs(1));
 				}
 
-				using ( IDbConnection connection = this.Adapter.GetConnection(this.Registration.ConnectionString) )
+				using ( IDbConnection connection = this.Registration.GetConnection() )
 				{
 					connection.Open();
 
@@ -399,13 +411,6 @@ namespace Digillect.Xde
 
 				throw;
 			}
-		}
-		#endregion
-
-		#region IXdeHierarchyObject Members
-		IXdeHierarchyObject IXdeHierarchyObject.Owner
-		{
-			get { return m_registration; }
 		}
 		#endregion
 	}

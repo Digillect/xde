@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -9,20 +10,22 @@ namespace Digillect.Xde
 	/// <summary>
 	/// Коллекция объектов данных.
 	/// </summary>
-	public sealed class XdeUnitCollection : XdeObjectCollection<XdeUnit>, IXdeObject
+	public sealed class XdeUnitCollection : Collection<XdeUnit>, IXdeObject
 	{
+		private readonly XdeRegistration m_registration;
+
 		#region ctor
-		internal XdeUnitCollection(XdeSession owner)
-			: base(owner)
+		internal XdeUnitCollection(XdeSession session)
 		{
+			m_registration = session.Registration;
 		}
 		#endregion
 
 		public void Add(XdeUnit item, XdeExecutionOperation operation)
 		{
-			item.Operation = operation;
-
 			Add(item);
+
+			item.Operation = operation;
 		}
 
 		public void AddRange(IEnumerable<XdeUnit> collection)
@@ -47,6 +50,14 @@ namespace Digillect.Xde
 			}
 		}
 
+		public void ForEach(Action<XdeUnit> action)
+		{
+			foreach ( var item in this.Items )
+			{
+				action(item);
+			}
+		}
+
 		#region Obsolete Methods
 		/// <summary>
 		/// Не рекомендуется, вместо этого вызова надо использовать <see cref="IXdeObject.GetCommand"/> с последующим выполнением или добавлением самого объекта данных в транзакцию и ее выполнение.
@@ -55,7 +66,7 @@ namespace Digillect.Xde
 		[Obsolete("Not recommended. Use GetCommand() and execute it or add this object into transaction immediately.")]
 		public void Prepare()
 		{
-			((XdeSession) m_owner).Execute(this.Items.SelectMany(x => x.GetCommand()));
+			m_registration.NewSession().Execute(GetCommand());
 		}
 
 		/// <summary>
@@ -65,9 +76,7 @@ namespace Digillect.Xde
 		[Obsolete("Not recommended. Set the operation explicitly then use GetCommand() and execute it or add this object into transaction immediately.")]
 		public void Save()
 		{
-			XdeSession session = ((XdeSession) m_owner);
-
-			session.Execute(this.Items.SelectMany(unit => session.Layer.GetUnitSaveCommand(unit)));
+			m_registration.NewSession().Execute(this.Items.SelectMany(unit => m_registration.Layer.GetUnitSaveCommand(unit)));
 		}
 
 		/// <summary>
@@ -77,9 +86,7 @@ namespace Digillect.Xde
 		[Obsolete("Not recommended. Set the operation explicitly then use GetCommand() and execute it or add this object into transaction immediately.")]
 		public void Delete()
 		{
-			XdeSession session = ((XdeSession) m_owner);
-
-			session.Execute(this.Items.SelectMany(unit => session.Layer.GetUnitDeleteCommand(unit)));
+			m_registration.NewSession().Execute(this.Items.SelectMany(unit => m_registration.Layer.GetUnitDeleteCommand(unit)));
 		}
 		#endregion
 
@@ -132,6 +139,38 @@ namespace Digillect.Xde
 		public IEnumerable<XdeCommand> GetCommand()
 		{
 			return this.Items.SelectMany(x => x.GetCommand());
+		}
+		#endregion
+
+		#region Collection`1 Overrides
+		protected override void InsertItem(int index, XdeUnit item)
+		{
+			if ( item == null )
+			{
+				throw new ArgumentNullException("item");
+			}
+
+			if ( item.Owner != m_registration )
+			{
+				throw new ArgumentException("Invalid object hierarchy.", "item");
+			}
+
+			base.InsertItem(index, item);
+		}
+
+		protected override void SetItem(int index, XdeUnit item)
+		{
+			if ( item == null )
+			{
+				throw new ArgumentNullException("item");
+			}
+
+			if ( item.Owner != m_registration )
+			{
+				throw new ArgumentException("Invalid object hierarchy.", "item");
+			}
+
+			base.SetItem(index, item);
 		}
 		#endregion
 	}

@@ -9,6 +9,7 @@ namespace Digillect.Xde
 	/// <summary>
 	/// Сущность объекта данных.
 	/// </summary>
+	[System.Diagnostics.DebuggerDisplay("Name = {Name} EntityType = {EntityType}")]
 	public class XdeEntity : XdeHierarchyObject, IXdeDatabaseObject
 	{
 		private bool m_exists;
@@ -22,14 +23,16 @@ namespace Digillect.Xde
 		private XdeExecutionOperation m_operation = XdeExecutionOperation.Save;
 
 		#region ctor
-		public XdeEntity(XdeSession owner, string name, XdeEntityType type, bool initializeColumns)
-			: base(owner, name.ToUpper())
+		public XdeEntity(XdeSession session, string name, XdeEntityType type, bool initializeColumns)
+			: base(session.Registration, name.ToUpper())
 		{
 			m_entityType = type;
 
 			if ( initializeColumns )
 			{
 				m_columns = new ColumnCollection(this);
+				m_constraints = new XdeObjectCollection<XdeConstraint>(this);
+				m_indexes = new XdeObjectCollection<XdeIndex>(this);
 
 				XdeEntityColumn idColumn = new XdeEntityColumn(this, XdeEntityColumnMetadata.GetUniqueidentifierColumnInfo());
 				idColumn.Modified = false;
@@ -126,6 +129,7 @@ namespace Digillect.Xde
 			get { return m_entityType == XdeEntityType.View; }
 		}
 
+		/* Not used internally but easy to implement externally
 		public IEnumerable<XdeForeignKeyConstraint> References
 		{
 			get
@@ -136,6 +140,7 @@ namespace Digillect.Xde
 						.Where(fk => fk.ReferencingEntityName.Equals(this.Name, StringComparison.OrdinalIgnoreCase)));
 			}
 		}
+		*/
 
 		public XdeIndex PrimaryKey
 		{
@@ -160,12 +165,15 @@ namespace Digillect.Xde
 
 		public void Refresh()
 		{
-			m_columns = null;
-			m_constraints = null;
-			m_indexes = null;
-			m_deletedColumns = null;
+			lock ( this )
+			{
+				m_columns = null;
+				m_constraints = null;
+				m_indexes = null;
+				m_deletedColumns = null;
 
-			Init();
+				Init();
+			}
 		}
 
 		private void Init()
@@ -179,28 +187,32 @@ namespace Digillect.Xde
 
 			m_columns.Add(idColumn);
 
-			XdeSession session = this.GetSession();
+			var registration = this.GetOwnerOf<XdeRegistration>();
+			var entities = registration.Entities ?? registration.NewSession().Entities;
 
-			if ( !session.Entities.Contains(this.Name) )
+			if ( !entities.Contains(this.Name) )
 			{
 				return;
 			}
 
-			using ( IDbConnection dbConnection = session.Adapter.GetConnection(session.Registration.ConnectionString) )
+			IXdeAdapter adapter = registration.Adapter;
+			IXdeLayer layer = registration.Layer;
+
+			using ( IDbConnection dbConnection = registration.GetConnection() )
 			{
 				dbConnection.Open();
 
-				XdeCommand command = session.Layer.GetColumnsSelectCommand(this.Name);
+				XdeCommand command = layer.GetColumnsSelectCommand(this.Name);
 
 				command.Dump();
 
-				using ( IDbCommand dbCommand = session.Adapter.GetCommand(dbConnection, command) )
+				using ( IDbCommand dbCommand = adapter.GetCommand(dbConnection, command) )
 				{
 					using ( IDataReader rs = dbCommand.ExecuteReader() )
 					{
 						while ( rs.Read() )
 						{
-							XdeEntityColumnMetadata columnInfo = session.Layer.GetColumnMetaData(session.Adapter, rs);
+							XdeEntityColumnMetadata columnInfo = layer.GetColumnMetaData(adapter, rs);
 							XdeEntityColumn column = new XdeEntityColumn(this, columnInfo);
 							column.Modified = false;
 							column.IsExists = true;
@@ -210,11 +222,11 @@ namespace Digillect.Xde
 					}
 				}
 
-				command = session.Layer.GetEntityReferencesCommand(this.Name);
+				command = layer.GetEntityReferencesCommand(this.Name);
 
 				command.Dump();
 
-				using ( IDbCommand dbCommand = session.Adapter.GetCommand(dbConnection, command) )
+				using ( IDbCommand dbCommand = adapter.GetCommand(dbConnection, command) )
 				{
 					using ( IDataReader dataReader = dbCommand.ExecuteReader() )
 					{
@@ -228,12 +240,12 @@ namespace Digillect.Xde
 								//string entityName = dataReader.GetString(3).Substring(3); // RTABLE_NAME
 								string columnName = dataReader.GetString(4); // RCOLUMN_NAME
 
-								if ( foreignColumnName.Equals(session.Layer.GetIdColumnName(), StringComparison.OrdinalIgnoreCase) )
+								if ( foreignColumnName.Equals(layer.GetIdColumnName(), StringComparison.OrdinalIgnoreCase) )
 									foreignColumnName = String.Empty;
 								else
 									foreignColumnName = foreignColumnName.Substring(3);
 
-								if ( columnName.Equals(session.Layer.GetIdColumnName(), StringComparison.OrdinalIgnoreCase) )
+								if ( columnName.Equals(layer.GetIdColumnName(), StringComparison.OrdinalIgnoreCase) )
 									columnName = String.Empty;
 								else
 									columnName = columnName.Substring(3);
@@ -249,11 +261,11 @@ namespace Digillect.Xde
 					}
 				}
 
-				command = session.Layer.GetEntityIndexesCommand(this.Name);
+				command = layer.GetEntityIndexesCommand(this.Name);
 
 				command.Dump();
 
-				using ( IDbCommand dbCommand = session.Adapter.GetCommand(dbConnection, command) )
+				using ( IDbCommand dbCommand = adapter.GetCommand(dbConnection, command) )
 				{
 					using ( IDataReader dataReader = dbCommand.ExecuteReader() )
 					{
@@ -291,7 +303,7 @@ namespace Digillect.Xde
 									string key = ss[0].Trim();
 									string indexColumnName;
 
-									if ( key.Equals(session.Layer.GetIdColumnName(), StringComparison.OrdinalIgnoreCase) )
+									if ( key.Equals(layer.GetIdColumnName(), StringComparison.OrdinalIgnoreCase) )
 									{
 										indexColumnName = String.Empty;
 									}
@@ -326,13 +338,13 @@ namespace Digillect.Xde
 		/// <returns>Новый объект данных.</returns>
 		public XdeUnit NewUnit(Guid id)
 		{
-			XdeUnit unit = new XdeUnit(this.GetSession(), this.Name, id);
+			XdeUnit unit = new XdeUnit(this, id);
 
 			foreach ( XdeEntityColumn column in this.Columns )
 			{
 				if ( !unit.Properties.Contains(column.Name) )
 				{
-					unit.Properties.Add(String.IsNullOrEmpty(column.Name) ? new XdeProperty.IdentifierProperty(unit, column.Name) : new XdeProperty(unit, column.Name, null));
+					unit.Properties.Add(String.IsNullOrEmpty(column.Name) ? new XdeProperty.IdentifierProperty(unit) : new XdeProperty(unit, column.Name, null));
 				}
 			}
 
@@ -344,7 +356,7 @@ namespace Digillect.Xde
 		/// </summary>
 		/// <returns>Новый объект данных.</returns>
 		/// <remarks>
-		/// Для созданного объекта данных устанавливается уникальный идентификатор, признак <see cref="XdeUnit.IsExists"/> устанавливается в <b>false</b>.
+		/// Для созданного объекта данных устанавливается уникальный идентификатор, признак <see cref="XdeUnit.IsExists"/> устанавливается в <c>false</c>.
 		/// </remarks>
 		public XdeUnit NewUnit()
 		{
@@ -378,7 +390,7 @@ namespace Digillect.Xde
 				throw new NotSupportedException(String.Format("Can't save or drop non-table entity {0}.", this.Name));
 			}
 
-			IXdeLayer layer = this.GetSession().Layer;
+			IXdeLayer layer = this.GetXdeLayer();
 
 			if ( m_operation == XdeExecutionOperation.Delete )
 			{
@@ -540,7 +552,7 @@ namespace Digillect.Xde
 	public sealed class XdeEntityCollection : XdeObjectCollection<XdeEntity>
 	{
 		#region ctor
-		internal XdeEntityCollection(XdeSession owner)
+		internal XdeEntityCollection(XdeRegistration owner)
 			: base(owner)
 		{
 		}

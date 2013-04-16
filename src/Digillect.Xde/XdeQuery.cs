@@ -217,6 +217,7 @@ namespace Digillect.Xde
 	/// </example>
 	public class XdeQuery : XdeHierarchyObject
 	{
+		private readonly XdeSession m_session;
 		private int m_commandTimeout = -1;
 		private readonly IList m_parameters = new ArrayList();
 		private readonly SelectItemCollection m_selectItems = new SelectItemCollection();
@@ -228,17 +229,22 @@ namespace Digillect.Xde
 		private XdeExecutionOperation m_operation = XdeExecutionOperation.Select;
 
 		#region ctor
-		protected XdeQuery(IXdeHierarchyObject owner, string name, string entityName)
+		protected XdeQuery(XdeQuery owner, string name, string entityName)
 			: base(owner, name)
 		{
+			m_session = owner.m_session;
 			m_joins = new XdeObjectCollection<XdeJoin>(this);
 			//m_unions = new XdeObjectCollection<XdeUnion>(this);
 			m_entityName = entityName;
 		}
 
-		internal XdeQuery(XdeSession owner, string name, string entityName, string whereClause, params object[] parameters)
-			: this(owner, name, entityName)
+		internal XdeQuery(XdeSession session, string name, string entityName, string whereClause, params object[] parameters)
+			: base(session.Registration, name)
 		{
+			m_session = session;
+			m_joins = new XdeObjectCollection<XdeJoin>(this);
+			//m_unions = new XdeObjectCollection<XdeUnion>(this);
+			m_entityName = entityName;
 			this.Where = whereClause;
 
 			Array.ForEach(parameters, x => m_parameters.Add(x));
@@ -479,6 +485,12 @@ namespace Digillect.Xde
 			get { return m_commandTimeout; }
 			set { m_commandTimeout = value; }
 		}
+
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public XdeSession Session
+		{
+			get { return m_session; }
+		}
 		#endregion
 
 		#region paging
@@ -586,7 +598,7 @@ namespace Digillect.Xde
 
 			if ( !String.IsNullOrWhiteSpace(this.SelectExclude) )
 			{
-				foreach ( string columnName in this.SelectExclude.Split(',') )
+				foreach ( string columnName in this.SelectExclude.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries) )
 				{
 					string buffer = columnName.Trim();
 
@@ -618,35 +630,25 @@ namespace Digillect.Xde
 
 			if ( !String.IsNullOrWhiteSpace(m_select) )
 			{
-				var excludeList = GetSelectExcludeItems();
+				ICollection<string> excludeList = GetSelectExcludeItems();
+				IEnumerable<string> columns;
 
 				if ( m_select.Trim() == "*" )
 				{
-					foreach ( XdeEntityColumn field in this.GetSession().Entities[this.EntityName].Columns.Where(x => !excludeList.Contains(x.Name)) )
-					{
-						selectList.Add(new SelectItem() { Alias = field.Name });
-					}
+					columns = from column in m_session.Entities[this.EntityName].Columns
+							  select column.Name into columnName
+							  where !String.IsNullOrEmpty(columnName) && !excludeList.Contains(columnName)
+							  select columnName;
 				}
 				else
 				{
-					foreach ( string columnName in m_select.Split(',') )
-					{
-						string buffer = columnName.Trim();
-
-						if ( buffer.Length != 0 )
-						{
-							if ( buffer[0] == '$' )
-							{
-								buffer = buffer.Substring(1);
-							}
-
-							if ( !excludeList.Contains(buffer) )
-							{
-								selectList.Add(new SelectItem() { Alias = buffer });
-							}
-						}
-					}
+					columns = from column in m_select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+							  select column.Trim().TrimStart('$') into columnName
+							  where !excludeList.Contains(columnName)
+							  select columnName;
 				}
+
+				selectList.AddRange(columns.Select(columnName => new SelectItem() { Alias = columnName }));
 			}
 
 			return selectList.AsReadOnly();
@@ -655,7 +657,7 @@ namespace Digillect.Xde
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public IEnumerable<string> GetFieldsListBySelect(bool eliminateId)
 		{
-			ICollection<string> rc = new List<string>();
+			List<string> rc = new List<string>();
 
 			if ( !eliminateId )
 			{
@@ -664,25 +666,24 @@ namespace Digillect.Xde
 
 			if ( !String.IsNullOrWhiteSpace(m_select) )
 			{
+				IEnumerable<string> columns;
+
 				if ( m_select.Trim() == "*" )
 				{
-					foreach ( XdeEntityColumn field in this.GetSession().Entities[this.EntityName].Columns.Where(x => !String.IsNullOrEmpty(x.Name)) )
-					{
-						rc.Add("$" + field.Name);
-					}
+					columns = from column in m_session.Entities[this.EntityName].Columns
+							  select column.Name into columnName
+							  where !String.IsNullOrEmpty(columnName)
+							  select "$" + columnName;
 				}
 				else
 				{
-					foreach ( string s in m_select.Split(',') )
-					{
-						string column = s.Trim();
-
-						if ( column.StartsWith("$") )
-						{
-							rc.Add(column);
-						}
-					}
+					columns = from s in m_select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+							  select s.Trim() into column
+							  where column.StartsWith("$")
+							  select column;
 				}
+
+				rc.AddRange(columns);
 			}
 
 			return rc;
@@ -834,7 +835,7 @@ namespace Digillect.Xde
 			}
 			else if ( m_operation == XdeExecutionOperation.Delete )
 			{
-				buffer.Append("\r\n\r\nDELETE FROM ").Append(this.GetSession().Layer.GetQualifiedTableName(this.Database, this.EntityName)).Append(Environment.NewLine)
+				buffer.Append("\r\n\r\nDELETE FROM ").Append(this.GetXdeLayer().GetQualifiedTableName(this.Database, this.EntityName)).Append(Environment.NewLine)
 					.Append(buildData.FromBuffer.ToString()).Append(Environment.NewLine)
 					.Append(buildData.WhereBuffer.ToString()).Append(Environment.NewLine);
 			}
@@ -844,7 +845,7 @@ namespace Digillect.Xde
 
 		private void ProcessBuildQuery(XdeQueryBuildData buildData)
 		{
-			IXdeLayer layer = this.GetSession().Layer;
+			IXdeLayer layer = this.GetXdeLayer();
 
 			layer.ProcessBuildQuerySelectList(this, buildData);
 			layer.ProcessBuildQueryClauses(this, buildData);
@@ -972,12 +973,11 @@ namespace Digillect.Xde
 		{
 			DateTime startDate = DateTime.Now;
 
-			XdeSession session = this.GetSession();
-			XdeUnitCollection units = session.NewUnits();
+			XdeUnitCollection units = m_session.NewUnits();
 
 			try
 			{
-				using ( IDbCommand dbCommand = session.Adapter.GetCommand(connection, command) )
+				using ( IDbCommand dbCommand = m_session.Registration.Adapter.GetCommand(connection, command) )
 				{
 					if ( outerTransaction != null )
 						dbCommand.Transaction = outerTransaction;
@@ -986,8 +986,6 @@ namespace Digillect.Xde
 						dbCommand.CommandTimeout = command.CommandTimeout;
 					else if ( m_commandTimeout >= 0 )
 						dbCommand.CommandTimeout = m_commandTimeout;
-					else if ( session.CommandTimeout >= 0 )
-						dbCommand.CommandTimeout = session.CommandTimeout;
 
 					using ( IDataReader dataReader = dbCommand.ExecuteReader() )
 					{
@@ -1014,14 +1012,14 @@ namespace Digillect.Xde
 							{
 								for ( int counter = 0; counter < m_pageSize && dataReader.Read(); counter++ )
 								{
-									units.Add(new XdeUnit(session, dataReader));
+									units.Add(new XdeUnit(m_session, dataReader));
 								}
 							}
 							else
 							{
 								while ( dataReader.Read() )
 								{
-									units.Add(new XdeUnit(session, dataReader));
+									units.Add(new XdeUnit(m_session, dataReader));
 								}
 							}
 						}
@@ -1068,9 +1066,7 @@ namespace Digillect.Xde
 			}
 			else
 			{
-				XdeSession session = this.GetSession();
-
-				using ( IDbConnection dbConnection = session.Adapter.GetConnection(session.Registration.ConnectionString) )
+				using ( IDbConnection dbConnection = this.GetOwnerOf<XdeRegistration>().GetConnection() )
 				{
 					dbConnection.Open();
 					return ProcessExecute(command, dbConnection, null);
@@ -1101,12 +1097,11 @@ namespace Digillect.Xde
 		{
 			DateTime startDate = DateTime.Now;
 
-			XdeSession session = this.GetSession();
 			XdeUnit unit = null;
 
 			try
 			{
-				using ( IDbCommand dbCommand = session.Adapter.GetCommand(connection, command) )
+				using ( IDbCommand dbCommand = m_session.Adapter.GetCommand(connection, command) )
 				{
 					if ( outerTransaction != null )
 						dbCommand.Transaction = outerTransaction;
@@ -1115,14 +1110,12 @@ namespace Digillect.Xde
 						dbCommand.CommandTimeout = command.CommandTimeout;
 					else if ( m_commandTimeout >= 0 )
 						dbCommand.CommandTimeout = m_commandTimeout;
-					else if ( session.CommandTimeout >= 0 )
-						dbCommand.CommandTimeout = session.CommandTimeout;
 
 					using ( IDataReader dataReader = dbCommand.ExecuteReader() )
 					{
 						if ( dataReader.Read() )
 						{
-							unit = new XdeUnit(session, dataReader);
+							unit = new XdeUnit(m_session, dataReader);
 						}
 
 						dbCommand.Cancel();
@@ -1169,9 +1162,7 @@ namespace Digillect.Xde
 			}
 			else
 			{
-				XdeSession session = this.GetSession();
-
-				using ( IDbConnection dbConnection = session.Adapter.GetConnection(session.Registration.ConnectionString) )
+				using ( IDbConnection dbConnection = this.GetOwnerOf<XdeRegistration>().GetConnection() )
 				{
 					dbConnection.Open();
 					return ProcessExecuteSingle(command, dbConnection, null);
@@ -1206,8 +1197,7 @@ namespace Digillect.Xde
 
 			command.Dump();
 
-			XdeSession session = this.GetSession();
-			XdeQueryResultSet context = new XdeQueryResultSet(session, m_pageSize);
+			XdeQueryResultSet context = new XdeQueryResultSet(m_session, m_pageSize);
 
 			try
 			{
@@ -1222,17 +1212,15 @@ namespace Digillect.Xde
 				else
 #endif
 				{
-					context.DbConnection = session.Adapter.GetConnection(session.Registration.ConnectionString);
+					context.DbConnection = m_session.Registration.GetConnection();
 					context.DbConnection.Open();
-					context.DbCommand = session.Adapter.GetCommand(context.DbConnection, command);
+					context.DbCommand = m_session.Registration.Adapter.GetCommand(context.DbConnection, command);
 				}
 
 				if ( command.CommandTimeout >= 0 )
 					context.DbCommand.CommandTimeout = command.CommandTimeout;
 				else if ( m_commandTimeout >= 0 )
 					context.DbCommand.CommandTimeout = m_commandTimeout;
-				else if ( session.CommandTimeout >= 0 )
-					context.DbCommand.CommandTimeout = session.CommandTimeout;
 
 				context.DataReader = context.DbCommand.ExecuteReader();
 				context.OpenTime = DateTime.Now - context.StartDate;

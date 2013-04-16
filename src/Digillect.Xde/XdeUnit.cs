@@ -18,15 +18,15 @@ namespace Digillect.Xde
 		private XdeExecutionOperation m_operation = XdeExecutionOperation.Save;
 
 		#region ctor
-		internal XdeUnit(XdeSession owner, string entityName, Guid id)
-			: this(owner)
+		internal XdeUnit(XdeEntity entity, Guid id)
+			: this(entity.GetOwnerOf<XdeRegistration>())
 		{
-			this.EntityName = entityName;
+			this.EntityName = entity.Name;
 			this.Id = id;
 		}
 
-		internal XdeUnit(XdeSession owner, IDataReader rs)
-			: this(owner)
+		internal XdeUnit(XdeSession session, IDataReader rs)
+			: this(session.Registration)
 		{
 			int ix = 0;
 
@@ -72,7 +72,12 @@ namespace Digillect.Xde
 		/// </summary>
 		public XdeEntity Entity
 		{
-			get { return this.GetSession().Entities[this.EntityName]; }
+			get
+			{
+				var registration = this.GetOwnerOf<XdeRegistration>();
+
+				return (registration.Entities ?? registration.NewSession().Entities)[this.EntityName];
+			}
 		}
 
 		/// <summary>
@@ -157,7 +162,7 @@ namespace Digillect.Xde
 		{
 			int fieldCount = rs.FieldCount;
 
-			IXdeAdapter adapter = this.GetSession().Adapter;
+			IXdeAdapter adapter = this.GetXdeAdapter();
 
 			int objectHeader = adapter.GetInt32(rs, fieldIndex++);
 
@@ -185,7 +190,7 @@ namespace Digillect.Xde
 			{
 				this.Id = adapter.GetGuid(rs, fieldIndex);
 
-				m_properties.Add(new XdeProperty.IdentifierProperty(this, string.Empty));
+				m_properties.Add(new XdeProperty.IdentifierProperty(this));
 
 				fieldIndex++;
 			}
@@ -326,7 +331,7 @@ namespace Digillect.Xde
 		/// <returns>Команда (набор SQL выражений).</returns>
 		public override IEnumerable<XdeCommand> GetCommand()
 		{
-			IXdeLayer layer = this.GetSession().Layer;
+			IXdeLayer layer = this.GetXdeLayer();
 
 			switch ( this.Operation )
 			{
@@ -348,7 +353,7 @@ namespace Digillect.Xde
 		[Obsolete("Not recommended. Use GetCommand() and execute it or add this object into transaction immediately.")]
 		public void Prepare()
 		{
-			this.GetSession().Execute(GetCommand());
+			this.GetOwnerOf<XdeRegistration>().NewSession().Execute(GetCommand());
 		}
 
 		/// <summary>
@@ -358,9 +363,9 @@ namespace Digillect.Xde
 		[Obsolete("Not recommended. Set the operation explicitly then use GetCommand() and execute it or add this object into transaction immediately.")]
 		public void Save()
 		{
-			XdeSession session = this.GetSession();
+			XdeRegistration registration = this.GetOwnerOf<XdeRegistration>();
 
-			session.Execute(session.Layer.GetUnitSaveCommand(this));
+			registration.NewSession().Execute(registration.Layer.GetUnitSaveCommand(this));
 		}
 
 		/// <summary>
@@ -373,9 +378,9 @@ namespace Digillect.Xde
 			if ( !this.IsExists ?? false )
 				throw new InvalidOperationException("Unit.Delete: this operation is not applicable to 'new' units.");
 
-			XdeSession session = this.GetSession();
+			XdeRegistration registration = this.GetOwnerOf<XdeRegistration>();
 
-			session.Execute(session.Layer.GetUnitDeleteCommand(this));
+			registration.NewSession().Execute(registration.Layer.GetUnitDeleteCommand(this));
 		}
 		#endregion
 
