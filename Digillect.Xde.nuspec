@@ -10,7 +10,7 @@
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<description>Digillect XDE Framework</description>
 		<releaseNotes>Completely rewritten release for .NET 4.0.</releaseNotes>
-		<copyright>Copyright © 2002-2013 Actis® Wunderman. All rights reserved.</copyright>
+		<copyright>Copyright © 2002 Actis® Wunderman. All rights reserved.</copyright>
 		<tags>digillect xde</tags>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.Data"/>

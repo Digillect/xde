@@ -1,33 +1,36 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
-		<BuildToolsVersion>1.2.0</BuildToolsVersion>
-		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-
-		<BuildPath>target\$(Configuration)\bin</BuildPath>
-		<OutputPath>target\$(Configuration)\package</OutputPath>
-		<VersionAssembly>$(BuildPath)\Digillect.Xde.dll</VersionAssembly>
+		<BuildToolsVersion Condition="'$(BuildToolsVersion)' == ''">2.0.0</BuildToolsVersion>
+		<Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+		<VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+		<BuildPath>$(MSBuildProjectDirectory)\target\$(Configuration)\bin\</BuildPath>
+		<OutputPath>$(MSBuildProjectDirectory)\target\$(Configuration)\package\</OutputPath>
+		<VersionAssembly>$(BuildPath)Digillect.Xde.dll</VersionAssembly>
 	</PropertyGroup>
 
+	<Import Project="$(MSBuildProjectDirectory)\packages\Digillect.Build.Tools.$(BuildToolsVersion)\build\Digillect.Build.Packaging.Nuget.props" />
+
 	<ItemGroup>
-		<LibNet40 Include="$(BuildPath)\Digillect.Xde.dll"/>
-		<LibNet40 Include="$(BuildPath)\Digillect.Xde.pdb"/>
-		<LibNet40 Include="$(BuildPath)\Digillect.Xde.xml"/>
-		<LibNet40 Include="$(BuildPath)\CodeContracts\Digillect.Xde.Contracts.*"/>
+		<LibNet40 Include="$(BuildPath)Digillect.Xde.dll" />
+		<LibNet40 Include="$(BuildPath)Digillect.Xde.pdb" />
+		<LibNet40 Include="$(BuildPath)Digillect.Xde.xml" />
+		<LibNet40 Include="$(BuildPath)CodeContracts\Digillect.Xde.Contracts.*" />
 	</ItemGroup>
 
-	<Import Project="packages\Digillect.Build.Tools.$(BuildToolsVersion)\tools\NuGet.Packaging.targets"/>
+	<Import Project="$(MSBuildProjectDirectory)\packages\Digillect.Build.Tools.$(BuildToolsVersion)\build\Digillect.Build.Packaging.NuGet.targets" />
 
 	<Target Name="TransformPackageVersion">
 		<PropertyGroup>
-			<_Major>$([System.Text.RegularExpressions.Regex]::Replace($(PackageVersion), "(\d+.\d+.\d+)\.\d+.*", "$1"))</_Major>
-			<_Build>$([System.Text.RegularExpressions.Regex]::Replace($(PackageVersion), "\d+.\d+.\d+\.(\d+).*", "$1"))</_Build>
-			<_Suffix>$([System.Text.RegularExpressions.Regex]::Replace($(PackageVersion), "\d+.\d+.\d+\.\d+(.*)", "$1"))</_Suffix>
-			<_FormattedBuildNumber>$([System.String]::Format("{0:00000}", $([MSBuild]::Add($(_Build), 0))))</_FormattedBuildNumber>
+			<_PackageBuildNumber>$([System.Text.RegularExpressions.Regex]::Match($(PackageVersion), "^\d+\.\d+\.\d+\.(\d+)").Groups[1].Value)</_PackageBuildNumber>
 
-			<PackageVersion>$(_Major)$(_Suffix)</PackageVersion>
-			<PackageVersion Condition=" '$(BranchName)' != '' And '$(BranchName)' != 'master' ">$(PackageVersion)-$(BranchName)-$(_FormattedBuildNumber)</PackageVersion>
+			<PackageVersion>$([System.Text.RegularExpressions.Regex]::Replace($(PackageVersion), "^(\d+\.\d+\.\d+)\.\d+(.*)$", "$1$2"))</PackageVersion>
+		</PropertyGroup>
+
+		<PropertyGroup Condition="'$(BranchName)' != '' And '$(BranchName)' != 'master'">
+			<PackageVersion>$(PackageVersion)-$(BranchName)</PackageVersion>
+			<PackageVersion Condition="'$(_PackageBuildNumber)' != ''">$(PackageVersion)-$([System.String]::Format("{0:00000}", $([MSBuild]::Add($(_PackageBuildNumber), 0))))</PackageVersion>
 		</PropertyGroup>
 	</Target>
 </Project>
